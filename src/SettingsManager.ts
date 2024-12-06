@@ -1,6 +1,5 @@
 import { Plugin } from "obsidian";
 
-
 export interface WhisperSettings {
 	apiKey: string;
 	apiUrl: string;
@@ -12,13 +11,6 @@ export interface WhisperSettings {
 	debugMode: boolean;
 	createNewFileAfterRecording: boolean;
 	createNewFileAfterRecordingPath: string;
-
-	// New fields:
-	usePostProcessing: boolean;              // (1) Use postprocessing
-	postProcessingPrompt: string;           // (2) Post-processing prompt
-	postProcessingModel: string;            // (3) Model dropdown
-	autoGenerateTitle: boolean;             // (4) Auto generate title
-	titleGenerationPrompt: string;          // (5) Title-generation prompt
 }
 
 export const DEFAULT_SETTINGS: WhisperSettings = {
@@ -32,13 +24,6 @@ export const DEFAULT_SETTINGS: WhisperSettings = {
 	debugMode: false,
 	createNewFileAfterRecording: true,
 	createNewFileAfterRecordingPath: "",
-
-	// Set defaults for new settings
-	usePostProcessing: false,
-	postProcessingPrompt: "You are a perfect transcription program that is able to take faulty dictations and put them into a readable, grammatically correct form without changing their content or changing their specific formulations. It is important that you leave formulations as they are, and make no attempts to formalize or professionalize them. If there are repetions of content, choose the best (often last) one and make the sentence work with that.",
-	postProcessingModel: "gpt-4",
-	autoGenerateTitle: false,
-	titleGenerationPrompt: "Generate a short title for the following text:"
 };
 
 export class SettingsManager {
