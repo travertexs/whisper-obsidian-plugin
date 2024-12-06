@@ -1,6 +1,6 @@
 # Speech-to-text in Obsidian using OpenAI Whisper 🗣️📝
 
-**Trying to implement GPT-4 post-fixing of the text here.**
+*Trying to implement GPT-4 post-fixing of the text here.* – MN
 
 
 
