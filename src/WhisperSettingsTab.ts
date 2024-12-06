@@ -29,6 +29,9 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		this.createNewFileToggleSetting();
 		this.createNewFilePathSetting();
 		this.createDebugModeToggleSetting();
+
+		this.containerEl.createEl("h2", { text: "GPT Post-processing Settings" });
+		this.createPostProcessingSettings();
 	}
 
 	private getUniqueFolders(): TFolder[] {
@@ -235,5 +238,70 @@ export class WhisperSettingsTab extends PluginSettingTab {
 						);
 					});
 			});
+	}
+	
+
+
+	private createPostProcessingSettings(): void {
+		// Toggle to enable/disable post-processing
+		new Setting(this.containerEl)
+			.setName("Use Post-processing")
+			.setDesc("Turn on to post-process the transcribed text using GPT.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.usePostProcessing)
+				.onChange(async (value) => {
+					this.plugin.settings.usePostProcessing = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+					// You may want to enable/disable other controls based on this value
+				}));
+
+		// Post-processing prompt
+		new Setting(this.containerEl)
+			.setName("Post-processing Prompt")
+			.setDesc("Enter the prompt that will be sent to the GPT model to polish the transcription.")
+			.addTextArea(textArea => textArea
+				.setPlaceholder("Enter your prompt here...")
+				.setValue(this.plugin.settings.postProcessingPrompt)
+				.onChange(async (value) => {
+					this.plugin.settings.postProcessingPrompt = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+
+		// Model dropdown
+		const models = ["gpt-3.5-turbo", "gpt-4", "gpt-4-32k"]; // Add whichever models you want to offer
+		new Setting(this.containerEl)
+			.setName("Post-processing Model")
+			.setDesc("Select which OpenAI model to use for post-processing.")
+			.addDropdown(dropdown => {
+				models.forEach(model => dropdown.addOption(model, model));
+				dropdown.setValue(this.plugin.settings.postProcessingModel);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.postProcessingModel = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				});
+			});
+
+		// Auto generate title
+		new Setting(this.containerEl)
+			.setName("Auto-generate Title")
+			.setDesc("Turn on to automatically generate a title for the transcribed text.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.autoGenerateTitle)
+				.onChange(async (value) => {
+					this.plugin.settings.autoGenerateTitle = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+
+		// Title-generation prompt
+		new Setting(this.containerEl)
+			.setName("Title-generation Prompt")
+			.setDesc("The prompt used to generate a title from the transcribed text.")
+			.addTextArea(textArea => textArea
+				.setPlaceholder("Enter your title-generation prompt...")
+				.setValue(this.plugin.settings.titleGenerationPrompt)
+				.onChange(async (value) => {
+					this.plugin.settings.titleGenerationPrompt = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
 	}
 }
