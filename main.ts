@@ -6,6 +6,8 @@ import { WhisperSettingsTab } from "src/WhisperSettingsTab";
 import { SettingsManager, WhisperSettings } from "src/SettingsManager";
 import { NativeAudioRecorder } from "src/AudioRecorder";
 import { RecordingStatus, StatusBar } from "src/StatusBar";
+import { generateTimestampedFileName } from "src/utils";
+
 export default class Whisper extends Plugin {
 	settings: WhisperSettings;
 	settingsManager: SettingsManager;
@@ -56,12 +58,9 @@ export default class Whisper extends Plugin {
 				} else {
 					this.statusBar.updateStatus(RecordingStatus.Processing);
 					const audioBlob = await this.recorder.stopRecording();
-					const extension = this.recorder
-						.getMimeType()
-						?.split("/")[1];
-					const fileName = `${new Date()
-						.toISOString()
-						.replace(/[:.]/g, "-")}.${extension}`;
+					const extension = this.recorder.getMimeType()?.split("/")[1];
+					const fileName = generateTimestampedFileName(extension);
+
 					// Use audioBlob to send or save the recorded audio as needed
 					await this.audioHandler.sendAudioData(audioBlob, fileName);
 					this.statusBar.updateStatus(RecordingStatus.Idle);
@@ -92,10 +91,7 @@ export default class Whisper extends Plugin {
 						const fileName = file.name;
 						const audioBlob = file.slice(0, file.size, file.type);
 						// Use audioBlob to send or save the uploaded audio as needed
-						await this.audioHandler.sendAudioData(
-							audioBlob,
-							fileName
-						);
+						await this.audioHandler.sendAudioData(audioBlob, fileName);
 					}
 				};
 

@@ -124,6 +124,23 @@ var StatusBar = class {
   }
 };
 
+// src/utils.ts
+function getBaseFileName(filePath) {
+  const fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+  const baseFileName = fileName.substring(0, fileName.lastIndexOf("."));
+  return baseFileName;
+}
+function generateTimestampedFileName(extension) {
+  const now = /* @__PURE__ */ new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const hours = String(now.getHours()).padStart(2, "0");
+  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const dateStr = `${year}-${month}-${day}_${hours}-${minutes}`;
+  return `${dateStr}${extension ? `.${extension}` : ""}`;
+}
+
 // src/Controls.ts
 var Controls = class extends import_obsidian.Modal {
   constructor(plugin) {
@@ -166,7 +183,7 @@ var Controls = class extends import_obsidian.Modal {
     this.plugin.timer.reset();
     this.resetGUI();
     const extension = (_a = this.plugin.recorder.getMimeType()) == null ? void 0 : _a.split("/")[1];
-    const fileName = `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.${extension}`;
+    const fileName = generateTimestampedFileName(extension);
     await this.plugin.audioHandler.sendAudioData(blob, fileName);
     this.plugin.statusBar.updateStatus("idle" /* Idle */);
     this.close();
@@ -2295,24 +2312,16 @@ var {
 
 // src/AudioHandler.ts
 var import_obsidian2 = require("obsidian");
-
-// src/utils.ts
-function getBaseFileName(filePath) {
-  const fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-  const baseFileName = fileName.substring(0, fileName.lastIndexOf("."));
-  return baseFileName;
-}
-
-// src/AudioHandler.ts
 var AudioHandler = class {
   constructor(plugin) {
     this.plugin = plugin;
   }
   async sendAudioData(blob, fileName) {
     var _a;
-    const baseFileName = getBaseFileName(fileName);
-    const audioFilePath = `${this.plugin.settings.saveAudioFilePath ? `${this.plugin.settings.saveAudioFilePath}/` : ""}${fileName}`;
-    const noteFilePath = `${this.plugin.settings.createNewFileAfterRecordingPath ? `${this.plugin.settings.createNewFileAfterRecordingPath}/` : ""}${baseFileName}.md`;
+    const timestampedFileName = fileName;
+    const baseFileName = getBaseFileName(timestampedFileName);
+    let audioFilePath = `${this.plugin.settings.saveAudioFilePath ? `${this.plugin.settings.saveAudioFilePath}/` : ""}${timestampedFileName}`;
+    let noteFilePath = `${this.plugin.settings.createNewFileAfterRecordingPath ? `${this.plugin.settings.createNewFileAfterRecordingPath}/` : ""}${baseFileName}.md`;
     if (this.plugin.settings.debugMode) {
       new import_obsidian2.Notice(`Sending audio data size: ${blob.size / 1e3} KB`);
     }
@@ -2323,11 +2332,12 @@ var AudioHandler = class {
       return;
     }
     const formData = new FormData();
-    formData.append("file", blob, fileName);
+    formData.append("file", blob, timestampedFileName);
     formData.append("model", this.plugin.settings.model);
     formData.append("language", this.plugin.settings.language);
-    if (this.plugin.settings.prompt)
+    if (this.plugin.settings.prompt) {
       formData.append("prompt", this.plugin.settings.prompt);
+    }
     try {
       if (this.plugin.settings.saveAudioFile) {
         const arrayBuffer = await blob.arrayBuffer();
@@ -2341,11 +2351,12 @@ var AudioHandler = class {
       console.error("Error saving audio file:", err);
       new import_obsidian2.Notice("Error saving audio file: " + err.message);
     }
+    let finalText;
     try {
       if (this.plugin.settings.debugMode) {
-        new import_obsidian2.Notice("Parsing audio data:" + fileName);
+        new import_obsidian2.Notice("Parsing audio data:" + timestampedFileName);
       }
-      const response = await axios_default.post(
+      const whisperResponse = await axios_default.post(
         this.plugin.settings.apiUrl,
         formData,
         {
@@ -2355,14 +2366,111 @@ var AudioHandler = class {
           }
         }
       );
+      finalText = whisperResponse.data.text;
+      if (this.plugin.settings.usePostProcessing && this.plugin.settings.postProcessingModel) {
+        if (this.plugin.settings.debugMode) {
+          new import_obsidian2.Notice("Post-processing transcription with GPT...");
+        }
+        try {
+          const postProcessResponse = await axios_default.post(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              model: this.plugin.settings.postProcessingModel,
+              messages: [
+                {
+                  role: "system",
+                  content: this.plugin.settings.postProcessingPrompt
+                },
+                {
+                  role: "user",
+                  content: finalText
+                }
+              ],
+              temperature: 0.7
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${this.plugin.settings.apiKey}`
+              }
+            }
+          );
+          finalText = postProcessResponse.data.choices[0].message.content.trim();
+          if (this.plugin.settings.debugMode) {
+            new import_obsidian2.Notice("Post-processing complete.");
+          }
+        } catch (postErr) {
+          console.error("Error during post-processing:", postErr);
+          new import_obsidian2.Notice(
+            "Error during post-processing: " + postErr.message
+          );
+        }
+      }
+      let finalTitle = null;
+      if (this.plugin.settings.autoGenerateTitle && this.plugin.settings.titleGenerationPrompt) {
+        if (this.plugin.settings.debugMode) {
+          new import_obsidian2.Notice("Generating title with GPT...");
+        }
+        try {
+          const titleResponse = await axios_default.post(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              model: this.plugin.settings.postProcessingModel || "gpt-4o",
+              messages: [
+                {
+                  role: "system",
+                  content: this.plugin.settings.titleGenerationPrompt
+                },
+                {
+                  role: "user",
+                  content: finalText
+                }
+              ],
+              temperature: 0.7
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${this.plugin.settings.apiKey}`
+              }
+            }
+          );
+          finalTitle = titleResponse.data.choices[0].message.content.trim();
+          if (this.plugin.settings.debugMode) {
+            new import_obsidian2.Notice(`Title generated: ${finalTitle}`);
+          }
+          if (finalTitle) {
+            finalTitle = finalTitle.replace(/[/\\?%*:|"<>]/g, "-").replace(/\n/g, " ").trim();
+            const nowFileName = `${finalTitle} - ${timestampedFileName}`;
+            const nowBaseFileName = getBaseFileName(nowFileName);
+            audioFilePath = `${this.plugin.settings.saveAudioFilePath ? `${this.plugin.settings.saveAudioFilePath}/` : ""}${nowFileName}`;
+            noteFilePath = `${this.plugin.settings.createNewFileAfterRecordingPath ? `${this.plugin.settings.createNewFileAfterRecordingPath}/` : ""}${nowBaseFileName}.md`;
+            if (this.plugin.settings.saveAudioFile) {
+              const oldAudioPath = `${this.plugin.settings.saveAudioFilePath ? `${this.plugin.settings.saveAudioFilePath}/` : ""}${timestampedFileName}`;
+              await this.plugin.app.vault.adapter.rename(
+                oldAudioPath,
+                audioFilePath
+              );
+            }
+          }
+        } catch (titleErr) {
+          console.error("Error generating title:", titleErr);
+          new import_obsidian2.Notice("Error generating title: " + titleErr.message);
+          finalTitle = null;
+        }
+      }
       const activeView = this.plugin.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
       const shouldCreateNewFile = this.plugin.settings.createNewFileAfterRecording || !activeView;
+      let noteContent = "";
+      if (this.plugin.settings.autoGenerateTitle && finalTitle && finalTitle.trim() !== "") {
+        noteContent = `![[${audioFilePath}]]
+${finalText}`;
+      } else {
+        noteContent = `![[${audioFilePath}]]
+${finalText}`;
+      }
       if (shouldCreateNewFile) {
-        await this.plugin.app.vault.create(
-          noteFilePath,
-          `![[${audioFilePath}]]
-${response.data.text}`
-        );
+        await this.plugin.app.vault.create(noteFilePath, noteContent);
         await this.plugin.app.workspace.openLinkText(
           noteFilePath,
           "",
@@ -2374,10 +2482,11 @@ ${response.data.text}`
         )) == null ? void 0 : _a.editor;
         if (editor) {
           const cursorPosition = editor.getCursor();
-          editor.replaceRange(response.data.text, cursorPosition);
+          editor.replaceRange(noteContent, cursorPosition);
+          const noteLines = noteContent.split("\n");
           const newPosition = {
-            line: cursorPosition.line,
-            ch: cursorPosition.ch + response.data.text.length
+            line: cursorPosition.line + noteLines.length - 1,
+            ch: noteLines[noteLines.length - 1].length
           };
           editor.setCursor(newPosition);
         }
@@ -2573,7 +2682,7 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
       this.plugin.settings.postProcessingPrompt = value;
       await this.settingsManager.saveSettings(this.plugin.settings);
     }));
-    const models = ["gpt-3.5-turbo", "gpt-4", "gpt-4-32k"];
+    const models = ["gpt-4o", "gpt-4o-mini"];
     new import_obsidian3.Setting(this.containerEl).setName("Post-processing Model").setDesc("Select which OpenAI model to use for post-processing.").addDropdown((dropdown) => {
       models.forEach((model) => dropdown.addOption(model, model));
       dropdown.setValue(this.plugin.settings.postProcessingModel);
@@ -2606,11 +2715,11 @@ var DEFAULT_SETTINGS = {
   createNewFileAfterRecording: true,
   createNewFileAfterRecordingPath: "",
   // Set defaults for new settings
-  usePostProcessing: false,
-  postProcessingPrompt: "You are a perfect transcription program that is able to take faulty dictations and put them into a readable, grammatically correct form without changing their content or changing their specific formulations. It is important that you leave formulations as they are, and make no attempts to formalize or professionalize them. If there are repetions of content, choose the best (often last) one and make the sentence work with that.",
-  postProcessingModel: "gpt-4",
-  autoGenerateTitle: false,
-  titleGenerationPrompt: "Generate a short title for the following text:"
+  usePostProcessing: true,
+  postProcessingPrompt: "You are a perfect transcription program that is able to take faulty dictations and put them into a readable, grammatically correct form without changing their content or changing their specific formulations. It is important that you leave formulations as they are, and make no attempts to formalize or professionalize them. If the dictation is a todolist, write it as a todolist in markdown format. If there are repetions of content, choose the best (often last) one and make the sentence work with that. Here comes the dictation: \n\n",
+  postProcessingModel: "gpt-4o",
+  autoGenerateTitle: true,
+  titleGenerationPrompt: "Generate a short, precise title for the following text. Reply only with the title, nothing else. Here is the text:"
 };
 var SettingsManager = class {
   constructor(plugin) {
@@ -2757,7 +2866,7 @@ var Whisper = class extends import_obsidian5.Plugin {
           this.statusBar.updateStatus("processing" /* Processing */);
           const audioBlob = await this.recorder.stopRecording();
           const extension = (_a = this.recorder.getMimeType()) == null ? void 0 : _a.split("/")[1];
-          const fileName = `${(/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-")}.${extension}`;
+          const fileName = generateTimestampedFileName(extension);
           await this.audioHandler.sendAudioData(audioBlob, fileName);
           this.statusBar.updateStatus("idle" /* Idle */);
         }
@@ -2782,10 +2891,7 @@ var Whisper = class extends import_obsidian5.Plugin {
             const file = files[0];
             const fileName = file.name;
             const audioBlob = file.slice(0, file.size, file.type);
-            await this.audioHandler.sendAudioData(
-              audioBlob,
-              fileName
-            );
+            await this.audioHandler.sendAudioData(audioBlob, fileName);
           }
         };
         fileInput.click();

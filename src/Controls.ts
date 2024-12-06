@@ -1,6 +1,7 @@
 import Whisper from "main";
 import { ButtonComponent, Modal } from "obsidian";
 import { RecordingStatus } from "./StatusBar";
+import { generateTimestampedFileName } from "./utils";
 
 export class Controls extends Modal {
 	private plugin: Whisper;
@@ -76,9 +77,8 @@ export class Controls extends Modal {
 		this.resetGUI();
 
 		const extension = this.plugin.recorder.getMimeType()?.split("/")[1];
-		const fileName = `${new Date()
-			.toISOString()
-			.replace(/[:.]/g, "-")}.${extension}`;
+		const fileName = generateTimestampedFileName(extension);
+		
 		await this.plugin.audioHandler.sendAudioData(blob, fileName);
 		this.plugin.statusBar.updateStatus(RecordingStatus.Idle);
 		this.close();

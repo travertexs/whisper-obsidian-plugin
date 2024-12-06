@@ -268,7 +268,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 				}));
 
 		// Model dropdown
-		const models = ["gpt-3.5-turbo", "gpt-4", "gpt-4-32k"]; // Add whichever models you want to offer
+		const models = ["gpt-4o","gpt-4o-mini"]; // Add whichever models you want to offer Implement o1 models later: ,"o1-preview","o1-mini"
 		new Setting(this.containerEl)
 			.setName("Post-processing Model")
 			.setDesc("Select which OpenAI model to use for post-processing.")
