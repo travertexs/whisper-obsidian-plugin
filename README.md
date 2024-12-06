@@ -1,5 +1,9 @@
 # Speech-to-text in Obsidian using OpenAI Whisper 🗣️📝
 
+**Trying to implement GPT-4 post-fixing of the text here.**
+
+
+
 Obsidian Whisper is a plugin that effortlessly turns your speech into written notes. Just speak your mind, and let [Whisper](https://openai.com/research/whisper) from OpenAI do the rest!
 
 ## 🚀 Getting Started
