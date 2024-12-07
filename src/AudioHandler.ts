@@ -90,36 +90,66 @@ export class AudioHandler {
 				this.plugin.settings.postProcessingModel
 			) {
 				if (this.plugin.settings.debugMode) {
-					new Notice("Post-processing transcription with GPT...");
+					new Notice("Post-processing transcription...");
 				}
 
 				try {
-					const postProcessResponse = await axios.post(
-						"https://api.openai.com/v1/chat/completions",
-						{
-							model: this.plugin.settings.postProcessingModel,
-							messages: [
-								{
-									role: "system",
-									content:
-										this.plugin.settings.postProcessingPrompt,
-								},
-								{
-									role: "user",
-									content: finalText,
-								},
-							],
-							temperature: 0.7,
-						},
-						{
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${this.plugin.settings.apiKey}`,
-							},
-						}
-					);
+					let postProcessResponse;
+					const isAnthropicModel = this.plugin.settings.postProcessingModel.startsWith('claude');
 
-					finalText = postProcessResponse.data.choices[0].message.content.trim();
+					if (isAnthropicModel) {
+						if (!this.plugin.settings.anthropicApiKey) {
+							throw new Error("Anthropic API key is required for Claude models");
+						}
+
+						postProcessResponse = await axios.post(
+							"https://api.anthropic.com/v1/messages",
+							{
+								model: this.plugin.settings.postProcessingModel,
+								messages: [
+									{
+										role: "user",
+										content: this.plugin.settings.postProcessingPrompt + "\n\n" + finalText
+									}
+								],
+								max_tokens: 1024
+							},
+							{
+								headers: {
+									"Content-Type": "application/json",
+									"x-api-key": this.plugin.settings.anthropicApiKey,
+									"anthropic-version": "2023-06-01"
+								}
+							}
+						);
+						finalText = postProcessResponse.data.content[0].text;
+					} else {
+						postProcessResponse = await axios.post(
+							"https://api.openai.com/v1/chat/completions",
+							{
+								model: this.plugin.settings.postProcessingModel,
+								messages: [
+									{
+										role: "system",
+										content: this.plugin.settings.postProcessingPrompt,
+									},
+									{
+										role: "user",
+										content: finalText,
+									},
+								],
+								temperature: 0.7,
+							},
+							{
+								headers: {
+									"Content-Type": "application/json",
+									Authorization: `Bearer ${this.plugin.settings.apiKey}`,
+								},
+							}
+						);
+						finalText = postProcessResponse.data.choices[0].message.content.trim();
+					}
+
 					if (this.plugin.settings.debugMode) {
 						new Notice("Post-processing complete.");
 					}
@@ -128,7 +158,6 @@ export class AudioHandler {
 					new Notice(
 						"Error during post-processing: " + postErr.message
 					);
-					// If post-processing fails, use original finalText from whisper
 				}
 			}
 
@@ -139,37 +168,64 @@ export class AudioHandler {
 				this.plugin.settings.titleGenerationPrompt
 			) {
 				if (this.plugin.settings.debugMode) {
-					new Notice("Generating title with GPT...");
+					new Notice("Generating title...");
 				}
 				try {
-					const titleResponse = await axios.post(
-						"https://api.openai.com/v1/chat/completions",
-						{
-							model:
-								this.plugin.settings.postProcessingModel ||
-								"gpt-4o",
-							messages: [
-								{
-									role: "system",
-									content:
-										this.plugin.settings.titleGenerationPrompt,
-								},
-								{
-									role: "user",
-									content: finalText,
-								},
-							],
-							temperature: 0.7,
-						},
-						{
-							headers: {
-								"Content-Type": "application/json",
-								Authorization: `Bearer ${this.plugin.settings.apiKey}`,
-							},
-						}
-					);
+					let titleResponse;
+					const isAnthropicModel = this.plugin.settings.postProcessingModel.startsWith('claude');
 
-					finalTitle = titleResponse.data.choices[0].message.content.trim();
+					if (isAnthropicModel) {
+						if (!this.plugin.settings.anthropicApiKey) {
+							throw new Error("Anthropic API key is required for Claude models");
+						}
+
+						titleResponse = await axios.post(
+							"https://api.anthropic.com/v1/messages",
+							{
+								model: this.plugin.settings.postProcessingModel,
+								messages: [
+									{
+										role: "user",
+										content: this.plugin.settings.titleGenerationPrompt + "\n\n" + finalText
+									}
+								],
+								max_tokens: 100
+							},
+							{
+								headers: {
+									"Content-Type": "application/json",
+									"x-api-key": this.plugin.settings.anthropicApiKey,
+									"anthropic-version": "2023-06-01"
+								}
+							}
+						);
+						finalTitle = titleResponse.data.content[0].text;
+					} else {
+						titleResponse = await axios.post(
+							"https://api.openai.com/v1/chat/completions",
+							{
+								model: this.plugin.settings.postProcessingModel || "gpt-4o",
+								messages: [
+									{
+										role: "system",
+										content: this.plugin.settings.titleGenerationPrompt,
+									},
+									{
+										role: "user",
+										content: finalText,
+									},
+								],
+								temperature: 0.7,
+							},
+							{
+								headers: {
+									"Content-Type": "application/json",
+									Authorization: `Bearer ${this.plugin.settings.apiKey}`,
+								},
+							}
+						);
+						finalTitle = titleResponse.data.choices[0].message.content.trim();
+					}
 
 					if (this.plugin.settings.debugMode) {
 						new Notice(`Title generated: ${finalTitle}`);

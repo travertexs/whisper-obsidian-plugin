@@ -267,11 +267,29 @@ export class WhisperSettingsTab extends PluginSettingTab {
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				}));
 
-		// Model dropdown
-		const models = ["gpt-4o","gpt-4o-mini"]; // Add whichever models you want to offer Implement o1 models later: ,"o1-preview","o1-mini"
+		// Add Anthropic API Key setting
+		this.createTextSetting(
+			"Anthropic API Key",
+			"Enter your Anthropic API key for Claude models",
+			"sk-ant-...",
+			this.plugin.settings.anthropicApiKey,
+			async (value) => {
+				this.plugin.settings.anthropicApiKey = value;
+				await this.settingsManager.saveSettings(this.plugin.settings);
+			}
+		);
+
+		// Update model dropdown
+		const models = [
+			"gpt-4o",
+			"gpt-4o-mini",
+			"claude-3-5-sonnet-20241022",
+			"claude-3-5-haiku-20241022",
+			"claude-3-opus-20240229"
+		];
 		new Setting(this.containerEl)
 			.setName("Post-processing Model")
-			.setDesc("Select which OpenAI model to use for post-processing.")
+			.setDesc("Select which AI model to use for post-processing.")
 			.addDropdown(dropdown => {
 				models.forEach(model => dropdown.addOption(model, model));
 				dropdown.setValue(this.plugin.settings.postProcessingModel);
