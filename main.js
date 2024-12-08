@@ -2593,8 +2593,9 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    this.createHeader();
+    this.containerEl.createEl("h2", { text: "API Keys" });
     this.createApiKeySettings();
+    this.containerEl.createEl("h2", { text: "Whisper Settings" });
     this.createApiUrlSetting();
     this.createModelSetting();
     this.createPromptSetting();
@@ -2604,7 +2605,7 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
     this.createNewFileToggleSetting();
     this.createNewFilePathSetting();
     this.createDebugModeToggleSetting();
-    this.containerEl.createEl("h2", { text: "GPT Post-processing Settings" });
+    this.containerEl.createEl("h2", { text: "Post-processing Settings" });
     this.createPostProcessingSettings();
   }
   getUniqueFolders() {
@@ -2618,9 +2619,6 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
     }
     return Array.from(folderSet);
   }
-  createHeader() {
-    this.containerEl.createEl("h2", { text: "Settings for Whisper." });
-  }
   createTextSetting(name, desc, placeholder, value, onChange) {
     new import_obsidian3.Setting(this.containerEl).setName(name).setDesc(desc).addText(
       (text) => text.setPlaceholder(placeholder).setValue(value).onChange(async (value2) => await onChange(value2))
@@ -2629,7 +2627,7 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
   createApiKeySettings() {
     this.createTextSetting(
       "Whisper API Key",
-      "Enter your API key for Whisper transcription (This can be the same as your OpenAI API key)",
+      "Enter your API key for Whisper transcription (This can be the same as your OpenAI API key, but could also be a key to the groq-API or Microsoft Azure.)",
       "sk-...xxxx",
       this.plugin.settings.whisperApiKey,
       async (value) => {
@@ -2673,7 +2671,7 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
   createModelSetting() {
     this.createTextSetting(
       "Model",
-      "Specify the machine learning model to use for generating text",
+      "Specify the machine learning model to use for transcribing audio to text (whisper-1 for OpenAI, whisper-large-v3 for Groq)",
       "whisper-1",
       this.plugin.settings.model,
       async (value) => {
@@ -2697,7 +2695,7 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
   createLanguageSetting() {
     this.createTextSetting(
       "Language",
-      "Specify the language of the message being whispered",
+      "Specify the language of the message being whispered (e.g. en for English). This can be left blank for auto-detection with OpenAI, but has to be set when using Groq.",
       "en",
       this.plugin.settings.language,
       async (value) => {
@@ -2785,16 +2783,6 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
       this.plugin.settings.postProcessingPrompt = value;
       await this.settingsManager.saveSettings(this.plugin.settings);
     }));
-    this.createTextSetting(
-      "Anthropic API Key",
-      "Enter your Anthropic API key for Claude models",
-      "sk-ant-...",
-      this.plugin.settings.anthropicApiKey,
-      async (value) => {
-        this.plugin.settings.anthropicApiKey = value;
-        await this.settingsManager.saveSettings(this.plugin.settings);
-      }
-    );
     const models = [
       "gpt-4o",
       "gpt-4o-mini",

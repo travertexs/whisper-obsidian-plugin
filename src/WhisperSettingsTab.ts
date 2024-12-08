@@ -18,8 +18,13 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		const { containerEl } = this;
 
 		containerEl.empty();
-		this.createHeader();
+		
+		// Add new API Keys header
+		this.containerEl.createEl("h2", { text: "API Keys" });
 		this.createApiKeySettings();
+		
+		// Add new Whisper Settings header
+		this.containerEl.createEl("h2", { text: "Whisper Settings" });
 		this.createApiUrlSetting();
 		this.createModelSetting();
 		this.createPromptSetting();
@@ -30,7 +35,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		this.createNewFilePathSetting();
 		this.createDebugModeToggleSetting();
 
-		this.containerEl.createEl("h2", { text: "GPT Post-processing Settings" });
+		this.containerEl.createEl("h2", { text: "Post-processing Settings" });
 		this.createPostProcessingSettings();
 	}
 
@@ -46,10 +51,6 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		}
 
 		return Array.from(folderSet);
-	}
-
-	private createHeader(): void {
-		this.containerEl.createEl("h2", { text: "Settings for Whisper." });
 	}
 
 	private createTextSetting(
@@ -74,7 +75,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		// Whisper API Key
 		this.createTextSetting(
 			"Whisper API Key",
-			"Enter your API key for Whisper transcription (This can be the same as your OpenAI API key)",
+			"Enter your API key for Whisper transcription (This can be the same as your OpenAI API key, but could also be a key to the groq-API or Microsoft Azure.)",
 			"sk-...xxxx",
 			this.plugin.settings.whisperApiKey,
 			async (value) => {
@@ -124,7 +125,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 	private createModelSetting(): void {
 		this.createTextSetting(
 			"Model",
-			"Specify the machine learning model to use for generating text",
+			"Specify the machine learning model to use for transcribing audio to text (whisper-1 for OpenAI, whisper-large-v3 for Groq)",
 			"whisper-1",
 			this.plugin.settings.model,
 			async (value) => {
@@ -150,7 +151,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 	private createLanguageSetting(): void {
 		this.createTextSetting(
 			"Language",
-			"Specify the language of the message being whispered",
+			"Specify the language of the message being whispered (e.g. en for English). This can be left blank for auto-detection with OpenAI, but has to be set when using Groq.",
 			"en",
 			this.plugin.settings.language,
 			async (value) => {
@@ -292,17 +293,6 @@ export class WhisperSettingsTab extends PluginSettingTab {
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				}));
 
-		// Add Anthropic API Key setting
-		this.createTextSetting(
-			"Anthropic API Key",
-			"Enter your Anthropic API key for Claude models",
-			"sk-ant-...",
-			this.plugin.settings.anthropicApiKey,
-			async (value) => {
-				this.plugin.settings.anthropicApiKey = value;
-				await this.settingsManager.saveSettings(this.plugin.settings);
-			}
-		);
 
 		// Update model dropdown
 		const models = [
