@@ -65,6 +65,7 @@ export class AudioHandler {
 		}
 
 		let finalText: string;
+		let originalText: string;
 		try {
 			if (this.plugin.settings.debugMode) {
 				new Notice("Parsing audio data:" + timestampedFileName);
@@ -80,9 +81,26 @@ export class AudioHandler {
 						Authorization: `Bearer ${this.plugin.settings.apiKey}`,
 					},
 				}
-			);
+			).catch(error => {
+				// Log detailed API error response
+				if (error.response) {
+					console.error("API Error Response:", {
+						status: error.response.status,
+						statusText: error.response.statusText,
+						data: error.response.data
+					});
+					throw new Error(`API Error (${error.response.status}): ${JSON.stringify(error.response.data)}`);
+				} else if (error.request) {
+					console.error("No response received:", error.request);
+					throw new Error("No response received from API");
+				} else {
+					console.error("Error setting up request:", error.message);
+					throw error;
+				}
+			});
 
-			finalText = whisperResponse.data.text;
+			originalText = whisperResponse.data.text;
+			finalText = originalText;
 
 			// Check for post-processing
 			if (
@@ -106,19 +124,20 @@ export class AudioHandler {
 							"https://api.anthropic.com/v1/messages",
 							{
 								model: this.plugin.settings.postProcessingModel,
+								max_tokens: 8190,
 								messages: [
 									{
 										role: "user",
 										content: this.plugin.settings.postProcessingPrompt + "\n\n" + finalText
 									}
-								],
-								max_tokens: 1024
+								]
 							},
 							{
 								headers: {
 									"Content-Type": "application/json",
 									"x-api-key": this.plugin.settings.anthropicApiKey,
-									"anthropic-version": "2023-06-01"
+									"anthropic-version": "2023-06-01",
+									"anthropic-dangerous-direct-browser-access": "true"
 								}
 							}
 						);
@@ -183,19 +202,20 @@ export class AudioHandler {
 							"https://api.anthropic.com/v1/messages",
 							{
 								model: this.plugin.settings.postProcessingModel,
+								max_tokens: 1000,
 								messages: [
 									{
 										role: "user",
 										content: this.plugin.settings.titleGenerationPrompt + "\n\n" + finalText
 									}
-								],
-								max_tokens: 100
+								]
 							},
 							{
 								headers: {
 									"Content-Type": "application/json",
 									"x-api-key": this.plugin.settings.anthropicApiKey,
-									"anthropic-version": "2023-06-01"
+									"anthropic-version": "2023-06-01",
+									"anthropic-dangerous-direct-browser-access": "true"
 								}
 							}
 						);
@@ -286,9 +306,19 @@ export class AudioHandler {
 				finalTitle &&
 				finalTitle.trim() !== ""
 			) {
-				noteContent = `![[${audioFilePath}]]\n${finalText}`; // Lets not prepend final title for now # ${finalTitle}\n\n
+				noteContent = `![[${audioFilePath}]]\n${finalText}`;
+				
+				// Add original transcription if enabled
+				if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
+					noteContent += "\n\n## Original Dictation\n" + originalText;
+				}
 			} else {
 				noteContent = `![[${audioFilePath}]]\n${finalText}`;
+				
+				// Add original transcription if enabled
+				if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
+					noteContent += "\n\n## Original Dictation\n" + originalText;
+				}
 			}
 
 			if (shouldCreateNewFile) {

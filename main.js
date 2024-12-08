@@ -2365,7 +2365,22 @@ var AudioHandler = class {
             Authorization: `Bearer ${this.plugin.settings.apiKey}`
           }
         }
-      );
+      ).catch((error) => {
+        if (error.response) {
+          console.error("API Error Response:", {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          });
+          throw new Error(`API Error (${error.response.status}): ${JSON.stringify(error.response.data)}`);
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+          throw new Error("No response received from API");
+        } else {
+          console.error("Error setting up request:", error.message);
+          throw error;
+        }
+      });
       finalText = whisperResponse.data.text;
       if (this.plugin.settings.usePostProcessing && this.plugin.settings.postProcessingModel) {
         if (this.plugin.settings.debugMode) {
@@ -2382,19 +2397,20 @@ var AudioHandler = class {
               "https://api.anthropic.com/v1/messages",
               {
                 model: this.plugin.settings.postProcessingModel,
+                max_tokens: 8190,
                 messages: [
                   {
                     role: "user",
                     content: this.plugin.settings.postProcessingPrompt + "\n\n" + finalText
                   }
-                ],
-                max_tokens: 1024
+                ]
               },
               {
                 headers: {
                   "Content-Type": "application/json",
                   "x-api-key": this.plugin.settings.anthropicApiKey,
-                  "anthropic-version": "2023-06-01"
+                  "anthropic-version": "2023-06-01",
+                  "anthropic-dangerous-direct-browser-access": "true"
                 }
               }
             );
@@ -2451,19 +2467,20 @@ var AudioHandler = class {
               "https://api.anthropic.com/v1/messages",
               {
                 model: this.plugin.settings.postProcessingModel,
+                max_tokens: 1e3,
                 messages: [
                   {
                     role: "user",
                     content: this.plugin.settings.titleGenerationPrompt + "\n\n" + finalText
                   }
-                ],
-                max_tokens: 100
+                ]
               },
               {
                 headers: {
                   "Content-Type": "application/json",
                   "x-api-key": this.plugin.settings.anthropicApiKey,
-                  "anthropic-version": "2023-06-01"
+                  "anthropic-version": "2023-06-01",
+                  "anthropic-dangerous-direct-browser-access": "true"
                 }
               }
             );
@@ -2753,8 +2770,9 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
     const models = [
       "gpt-4o",
       "gpt-4o-mini",
-      "claude-3-sonnet-20240229",
-      "claude-3-haiku-20240307"
+      "claude-3-5-sonnet-latest",
+      "claude-3-5-haiku-latest",
+      "claude-3-opus-latest"
     ];
     new import_obsidian3.Setting(this.containerEl).setName("Post-processing Model").setDesc("Select which AI model to use for post-processing.").addDropdown((dropdown) => {
       models.forEach((model) => dropdown.addOption(model, model));
@@ -2792,7 +2810,7 @@ var DEFAULT_SETTINGS = {
   postProcessingPrompt: "You are a perfect transcription program that is able to take faulty dictations and put them into a readable, grammatically correct form without changing their content or changing their specific formulations. It is important that you leave formulations as they are, and make no attempts to formalize or professionalize them. If the dictation is a todolist, write it as a todolist in markdown format. If there are repetions of content, choose the best (often last) one and make the sentence work with that. Always transcribe in the language of the dictation. Here comes the dictation: \n\n",
   postProcessingModel: "gpt-4o",
   autoGenerateTitle: true,
-  titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the text. TEXT:",
+  titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the TEXT. TEXT:",
   anthropicApiKey: ""
 };
 var SettingsManager = class {

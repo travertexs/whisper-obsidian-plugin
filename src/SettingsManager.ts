@@ -20,6 +20,7 @@ export interface WhisperSettings {
 	autoGenerateTitle: boolean;             // (4) Auto generate title
 	titleGenerationPrompt: string;          // (5) Title-generation prompt
 	anthropicApiKey: string;
+	keepOriginalTranscription: boolean;
 }
 
 export const DEFAULT_SETTINGS: WhisperSettings = {
@@ -39,8 +40,9 @@ export const DEFAULT_SETTINGS: WhisperSettings = {
 	postProcessingPrompt: "You are a perfect transcription program that is able to take faulty dictations and put them into a readable, grammatically correct form without changing their content or changing their specific formulations. It is important that you leave formulations as they are, and make no attempts to formalize or professionalize them. If the dictation is a todolist, write it as a todolist in markdown format. If there are repetions of content, choose the best (often last) one and make the sentence work with that. Always transcribe in the language of the dictation. Here comes the dictation: \n\n",
 	postProcessingModel: "gpt-4o",
 	autoGenerateTitle: true,
-	titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the text. TEXT:",
+	titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the TEXT. TEXT:",
 	anthropicApiKey: "",
+	keepOriginalTranscription: false,
 };
 
 export class SettingsManager {

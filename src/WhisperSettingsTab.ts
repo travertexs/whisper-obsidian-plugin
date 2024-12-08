@@ -283,9 +283,9 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		const models = [
 			"gpt-4o",
 			"gpt-4o-mini",
-			"claude-3-5-sonnet-20241022",
-			"claude-3-5-haiku-20241022",
-			"claude-3-opus-20240229"
+			"claude-3-5-sonnet-latest",
+			"claude-3-5-haiku-latest",
+			"claude-3-opus-latest"
 		];
 		new Setting(this.containerEl)
 			.setName("Post-processing Model")
@@ -319,6 +319,17 @@ export class WhisperSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.titleGenerationPrompt)
 				.onChange(async (value) => {
 					this.plugin.settings.titleGenerationPrompt = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+
+		// Add new setting for keeping original transcription
+		new Setting(this.containerEl)
+			.setName("Keep Original Transcription")
+			.setDesc("If enabled, adds the original Whisper transcription below the post-processed text.")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.keepOriginalTranscription)
+				.onChange(async (value) => {
+					this.plugin.settings.keepOriginalTranscription = value;
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				}));
 	}
