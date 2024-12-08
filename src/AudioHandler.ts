@@ -78,7 +78,7 @@ export class AudioHandler {
 				{
 					headers: {
 						"Content-Type": "multipart/form-data",
-						Authorization: `Bearer ${this.plugin.settings.apiKey}`,
+						Authorization: `Bearer ${this.plugin.settings.whisperApiKey}`,
 					},
 				}
 			).catch(error => {
@@ -162,7 +162,7 @@ export class AudioHandler {
 							{
 								headers: {
 									"Content-Type": "application/json",
-									Authorization: `Bearer ${this.plugin.settings.apiKey}`,
+									Authorization: `Bearer ${this.plugin.settings.openAiApiKey}`,
 								},
 							}
 						);
@@ -240,7 +240,7 @@ export class AudioHandler {
 							{
 								headers: {
 									"Content-Type": "application/json",
-									Authorization: `Bearer ${this.plugin.settings.apiKey}`,
+									Authorization: `Bearer ${this.plugin.settings.openAiApiKey}`,
 								},
 							}
 						);

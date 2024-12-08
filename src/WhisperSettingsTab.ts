@@ -19,7 +19,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 
 		containerEl.empty();
 		this.createHeader();
-		this.createApiKeySetting();
+		this.createApiKeySettings();
 		this.createApiUrlSetting();
 		this.createModelSetting();
 		this.createPromptSetting();
@@ -70,14 +70,39 @@ export class WhisperSettingsTab extends PluginSettingTab {
 			);
 	}
 
-	private createApiKeySetting(): void {
+	private createApiKeySettings(): void {
+		// Whisper API Key
 		this.createTextSetting(
-			"API Key",
-			"Enter your OpenAI API key",
+			"Whisper API Key",
+			"Enter your API key for Whisper transcription (This can be the same as your OpenAI API key)",
 			"sk-...xxxx",
-			this.plugin.settings.apiKey,
+			this.plugin.settings.whisperApiKey,
 			async (value) => {
-				this.plugin.settings.apiKey = value;
+				this.plugin.settings.whisperApiKey = value;
+				await this.settingsManager.saveSettings(this.plugin.settings);
+			}
+		);
+
+		// OpenAI API Key
+		this.createTextSetting(
+			"OpenAI API Key",
+			"Enter your OpenAI API key to use GPT models",
+			"sk-...xxxx",
+			this.plugin.settings.openAiApiKey,
+			async (value) => {
+				this.plugin.settings.openAiApiKey = value;
+				await this.settingsManager.saveSettings(this.plugin.settings);
+			}
+		);
+
+		// Anthropic API Key
+		this.createTextSetting(
+			"Anthropic API Key",
+			"Enter your Anthropic API key for Claude models",
+			"sk-ant-...",
+			this.plugin.settings.anthropicApiKey,
+			async (value) => {
+				this.plugin.settings.anthropicApiKey = value;
 				await this.settingsManager.saveSettings(this.plugin.settings);
 			}
 		);
