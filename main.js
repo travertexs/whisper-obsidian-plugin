@@ -2352,6 +2352,7 @@ var AudioHandler = class {
       new import_obsidian2.Notice("Error saving audio file: " + err.message);
     }
     let finalText;
+    let originalText;
     try {
       if (this.plugin.settings.debugMode) {
         new import_obsidian2.Notice("Parsing audio data:" + timestampedFileName);
@@ -2381,7 +2382,8 @@ var AudioHandler = class {
           throw error;
         }
       });
-      finalText = whisperResponse.data.text;
+      originalText = whisperResponse.data.text;
+      finalText = originalText;
       if (this.plugin.settings.usePostProcessing && this.plugin.settings.postProcessingModel) {
         if (this.plugin.settings.debugMode) {
           new import_obsidian2.Notice("Post-processing transcription...");
@@ -2540,9 +2542,15 @@ var AudioHandler = class {
       if (this.plugin.settings.autoGenerateTitle && finalTitle && finalTitle.trim() !== "") {
         noteContent = `![[${audioFilePath}]]
 ${finalText}`;
+        if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
+          noteContent += "\n\n## Original Dictation\n" + originalText;
+        }
       } else {
         noteContent = `![[${audioFilePath}]]
 ${finalText}`;
+        if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
+          noteContent += "\n\n## Original Dictation\n" + originalText;
+        }
       }
       if (shouldCreateNewFile) {
         await this.plugin.app.vault.create(noteFilePath, noteContent);
@@ -2790,6 +2798,10 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
       this.plugin.settings.titleGenerationPrompt = value;
       await this.settingsManager.saveSettings(this.plugin.settings);
     }));
+    new import_obsidian3.Setting(this.containerEl).setName("Keep Original Transcription").setDesc("If enabled, adds the original Whisper transcription below the post-processed text.").addToggle((toggle) => toggle.setValue(this.plugin.settings.keepOriginalTranscription).onChange(async (value) => {
+      this.plugin.settings.keepOriginalTranscription = value;
+      await this.settingsManager.saveSettings(this.plugin.settings);
+    }));
   }
 };
 
@@ -2811,7 +2823,8 @@ var DEFAULT_SETTINGS = {
   postProcessingModel: "gpt-4o",
   autoGenerateTitle: true,
   titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the TEXT. TEXT:",
-  anthropicApiKey: ""
+  anthropicApiKey: "",
+  keepOriginalTranscription: false
 };
 var SettingsManager = class {
   constructor(plugin) {
