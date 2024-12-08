@@ -34,7 +34,7 @@ export class AudioHandler {
 			new Notice(`Sending audio data size: ${blob.size / 1000} KB`);
 		}
 
-		if (!this.plugin.settings.apiKey) {
+		if (!this.plugin.settings.whisperApiKey) {
 			new Notice(
 				"API key is missing. Please add your API key in the settings."
 			);

@@ -2325,7 +2325,7 @@ var AudioHandler = class {
     if (this.plugin.settings.debugMode) {
       new import_obsidian2.Notice(`Sending audio data size: ${blob.size / 1e3} KB`);
     }
-    if (!this.plugin.settings.apiKey) {
+    if (!this.plugin.settings.whisperApiKey) {
       new import_obsidian2.Notice(
         "API key is missing. Please add your API key in the settings."
       );
@@ -2363,7 +2363,7 @@ var AudioHandler = class {
         {
           headers: {
             "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${this.plugin.settings.apiKey}`
+            Authorization: `Bearer ${this.plugin.settings.whisperApiKey}`
           }
         }
       ).catch((error) => {
@@ -2437,7 +2437,7 @@ var AudioHandler = class {
               {
                 headers: {
                   "Content-Type": "application/json",
-                  Authorization: `Bearer ${this.plugin.settings.apiKey}`
+                  Authorization: `Bearer ${this.plugin.settings.openAiApiKey}`
                 }
               }
             );
@@ -2507,7 +2507,7 @@ var AudioHandler = class {
               {
                 headers: {
                   "Content-Type": "application/json",
-                  Authorization: `Bearer ${this.plugin.settings.apiKey}`
+                  Authorization: `Bearer ${this.plugin.settings.openAiApiKey}`
                 }
               }
             );
@@ -2594,7 +2594,7 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     this.createHeader();
-    this.createApiKeySetting();
+    this.createApiKeySettings();
     this.createApiUrlSetting();
     this.createModelSetting();
     this.createPromptSetting();
@@ -2626,14 +2626,34 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
       (text) => text.setPlaceholder(placeholder).setValue(value).onChange(async (value2) => await onChange(value2))
     );
   }
-  createApiKeySetting() {
+  createApiKeySettings() {
     this.createTextSetting(
-      "API Key",
-      "Enter your OpenAI API key",
+      "Whisper API Key",
+      "Enter your API key for Whisper transcription (This can be the same as your OpenAI API key)",
       "sk-...xxxx",
-      this.plugin.settings.apiKey,
+      this.plugin.settings.whisperApiKey,
       async (value) => {
-        this.plugin.settings.apiKey = value;
+        this.plugin.settings.whisperApiKey = value;
+        await this.settingsManager.saveSettings(this.plugin.settings);
+      }
+    );
+    this.createTextSetting(
+      "OpenAI API Key",
+      "Enter your OpenAI API key to use GPT models",
+      "sk-...xxxx",
+      this.plugin.settings.openAiApiKey,
+      async (value) => {
+        this.plugin.settings.openAiApiKey = value;
+        await this.settingsManager.saveSettings(this.plugin.settings);
+      }
+    );
+    this.createTextSetting(
+      "Anthropic API Key",
+      "Enter your Anthropic API key for Claude models",
+      "sk-ant-...",
+      this.plugin.settings.anthropicApiKey,
+      async (value) => {
+        this.plugin.settings.anthropicApiKey = value;
         await this.settingsManager.saveSettings(this.plugin.settings);
       }
     );
@@ -2807,7 +2827,9 @@ var WhisperSettingsTab = class extends import_obsidian3.PluginSettingTab {
 
 // src/SettingsManager.ts
 var DEFAULT_SETTINGS = {
-  apiKey: "",
+  whisperApiKey: "",
+  openAiApiKey: "",
+  anthropicApiKey: "",
   apiUrl: "https://api.openai.com/v1/audio/transcriptions",
   model: "whisper-1",
   prompt: "",
@@ -2823,7 +2845,6 @@ var DEFAULT_SETTINGS = {
   postProcessingModel: "gpt-4o",
   autoGenerateTitle: true,
   titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the TEXT. TEXT:",
-  anthropicApiKey: "",
   keepOriginalTranscription: false
 };
 var SettingsManager = class {
