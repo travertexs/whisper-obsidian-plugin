@@ -1,6 +1,6 @@
 import { Notice } from "obsidian";
 import { createFFmpeg, fetchFile } from "@ffmpeg/ffmpeg";
-import { Whisper } from "./Whisper";
+import type { Whisper } from "./types";
 
 export interface AudioRecorder {
 	startRecording(): Promise<void>;

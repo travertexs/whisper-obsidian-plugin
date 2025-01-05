@@ -40,6 +40,8 @@ const context = await esbuild.context({
 		"@lezer/highlight",
 		"@lezer/lr",
 		...builtins,
+		"@ffmpeg/ffmpeg",
+		"@ffmpeg/util"
 	],
 	format: "cjs",
 	target: "es2018",
