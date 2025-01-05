@@ -37,6 +37,8 @@ export class WhisperSettingsTab extends PluginSettingTab {
 
 		this.containerEl.createEl("h2", { text: "Post-processing Settings" });
 		this.createPostProcessingSettings();
+
+		this.createSilenceRemovalSettings();
 	}
 
 	private getUniqueFolders(): TFolder[] {
@@ -345,6 +347,58 @@ export class WhisperSettingsTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.keepOriginalTranscription)
 				.onChange(async (value) => {
 					this.plugin.settings.keepOriginalTranscription = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+	}
+
+	private createSilenceRemovalSettings(): void {
+		this.containerEl.createEl("h2", { text: "Silence Removal Settings" });
+
+		// Toggle to enable/disable silence removal
+		new Setting(this.containerEl)
+			.setName("Remove Silence")
+			.setDesc("Remove silence from audio before processing")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.useSilenceRemoval)
+				.onChange(async (value) => {
+					this.plugin.settings.useSilenceRemoval = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+
+		// Silence threshold
+		new Setting(this.containerEl)
+			.setName("Silence Threshold")
+			.setDesc("Sound level (in dB) below which audio is considered silence. Lower values are more aggressive (-50 is default)")
+			.addSlider(slider => slider
+				.setLimits(-70, -20, 5)
+				.setValue(this.plugin.settings.silenceThreshold)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.silenceThreshold = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+
+		// Silence duration
+		new Setting(this.containerEl)
+			.setName("Minimum Silence Duration")
+			.setDesc("Minimum duration (in seconds) of silence to remove")
+			.addSlider(slider => slider
+				.setLimits(0.1, 3.0, 0.1)
+				.setValue(this.plugin.settings.silenceDuration)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.silenceDuration = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				}));
+
+		// Remove all silence periods
+		new Setting(this.containerEl)
+			.setName("Remove All Silence")
+			.setDesc("Remove all periods of silence that meet the threshold and duration criteria")
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.silenceRemoveAll)
+				.onChange(async (value) => {
+					this.plugin.settings.silenceRemoveAll = value;
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				}));
 	}
