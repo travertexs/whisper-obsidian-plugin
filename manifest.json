@@ -1,7 +1,7 @@
 {
   "id": "whisper-reworked",
   "name": "whisper-obsidian-plugin",
-  "version": "0.0.0.9",
+  "version": "0.0.1.0",
   "minAppVersion": "0.15.0",
   "description": "Speech-to-text in Obsidian using OpenAI Whisper",
   "author": "Nik Danilov",
