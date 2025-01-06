@@ -1,5 +1,5 @@
 import Whisper from "main";
-import { ButtonComponent, Modal } from "obsidian";
+import { ButtonComponent, Modal, Setting } from "obsidian";
 import { RecordingStatus } from "./StatusBar";
 import { generateTimestampedFileName } from "./utils";
 
@@ -100,5 +100,107 @@ export class Controls extends Modal {
 		this.pauseButton.setButtonText(
 			recorderState === "paused" ? " Resume" : " Pause"
 		);
+	}
+
+	onOpen() {
+		const { contentEl } = this;
+		contentEl.empty();
+
+		// Add elapsed time display
+		this.timerDisplay = contentEl.createEl("div", { cls: "timer" });
+		this.updateTimerDisplay();
+
+		// Add button group
+		const buttonGroupEl = contentEl.createEl("div", {
+			cls: "button-group",
+		});
+
+		// Add record button
+		this.startButton = new ButtonComponent(buttonGroupEl);
+		this.startButton
+			.setIcon("microphone")
+			.setButtonText(" Record")
+			.onClick(this.startRecording.bind(this))
+			.buttonEl.addClass("button-component");
+
+		// Add pause button
+		this.pauseButton = new ButtonComponent(buttonGroupEl);
+		this.pauseButton
+			.setIcon("pause")
+			.setButtonText(" Pause")
+			.onClick(this.pauseRecording.bind(this))
+			.buttonEl.addClass("button-component");
+
+		// Add stop button
+		this.stopButton = new ButtonComponent(buttonGroupEl);
+		this.stopButton
+			.setIcon("square")
+			.setButtonText(" Stop")
+			.onClick(this.stopRecording.bind(this))
+			.buttonEl.addClass("button-component");
+
+		// Add language selector below the controls
+		const languageSetting = new Setting(contentEl)
+			.setName("Language")
+			.setDesc("Select or enter the language for transcription");
+
+		// Create a container for the dropdown and input
+		const languageContainer = languageSetting.controlEl.createDiv();
+		languageContainer.style.display = "flex";
+		languageContainer.style.gap = "10px";
+		languageContainer.style.alignItems = "center";
+
+		// Add dropdown for common languages
+		const dropdown = languageContainer.createEl("select");
+		const commonLanguages = [
+			{ value: "", label: "Choose language..." },
+			{ value: "en", label: "English" },
+			{ value: "es", label: "Spanish" },
+			{ value: "fr", label: "French" },
+			{ value: "de", label: "German" },
+			{ value: "zh", label: "Chinese" },
+		];
+
+		commonLanguages.forEach(lang => {
+			const option = dropdown.createEl("option");
+			option.value = lang.value;
+			option.text = lang.label;
+		});
+
+		// Set initial value
+		dropdown.value = commonLanguages.find(lang => 
+			lang.value === this.plugin.settings.language
+		)?.value || "";
+
+		// Add text input for custom language
+		const customInput = languageContainer.createEl("input", {
+			type: "text",
+			placeholder: "Custom language code",
+		});
+		customInput.style.display = dropdown.value === "" ? "block" : "none";
+		customInput.value = commonLanguages.some(lang => 
+			lang.value === this.plugin.settings.language
+		) ? "" : this.plugin.settings.language;
+
+		// Handle dropdown changes
+		dropdown.addEventListener("change", async () => {
+			const selectedValue = dropdown.value;
+			customInput.style.display = selectedValue === "" ? "block" : "none";
+			
+			if (selectedValue !== "") {
+				this.plugin.settings.language = selectedValue;
+				await this.plugin.settingsManager.saveSettings(this.plugin.settings);
+			}
+		});
+
+		// Handle custom input changes
+		customInput.addEventListener("change", async () => {
+			if (customInput.value) {
+				this.plugin.settings.language = customInput.value;
+				await this.plugin.settingsManager.saveSettings(this.plugin.settings);
+			}
+		});
+
+		this.resetGUI();
 	}
 }
