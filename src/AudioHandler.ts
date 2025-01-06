@@ -11,13 +11,18 @@ export class AudioHandler {
 	}
 
 	async sendAudioData(blob: Blob, fileName: string): Promise<void> {
+		// If silence removal is enabled, the blob should be WAV format
+		// Update the filename extension accordingly
+		if (this.plugin.settings.useSilenceRemoval) {
+			fileName = fileName.replace(/\.[^/.]+$/, '.wav');
+			console.log("Using WAV filename:", fileName);
+		}
+
 		// Generate a timestamped filename (already provided in fileName)
 		const timestampedFileName = fileName;
-
-		// Get the base file name without extension
 		const baseFileName = getBaseFileName(timestampedFileName);
 
-		// Default file paths before title generation
+		// Set file paths
 		let audioFilePath = `${
 			this.plugin.settings.saveAudioFilePath
 				? `${this.plugin.settings.saveAudioFilePath}/`
@@ -31,33 +36,20 @@ export class AudioHandler {
 		}${baseFileName}.md`;
 
 		if (this.plugin.settings.debugMode) {
-			new Notice(`Sending audio data size: ${blob.size / 1000} KB`);
-		}
-
-		if (!this.plugin.settings.whisperApiKey) {
-			new Notice(
-				"API key is missing. Please add your API key in the settings."
-			);
-			return;
-		}
-
-		const formData = new FormData();
-		formData.append("file", blob, timestampedFileName);
-		formData.append("model", this.plugin.settings.model);
-		formData.append("language", this.plugin.settings.language);
-		if (this.plugin.settings.prompt) {
-			formData.append("prompt", this.plugin.settings.prompt);
+			console.log("Saving audio to:", audioFilePath);
+			console.log("Audio format:", blob.type);
+			console.log("Audio size:", blob.size);
 		}
 
 		// Save audio file if setting is enabled
 		try {
 			if (this.plugin.settings.saveAudioFile) {
 				const arrayBuffer = await blob.arrayBuffer();
-				await this.plugin.app.vault.adapter.writeBinary(
-					audioFilePath,
-					new Uint8Array(arrayBuffer)
-				);
-				new Notice("Audio saved successfully.");
+					await this.plugin.app.vault.adapter.writeBinary(
+						audioFilePath,
+						new Uint8Array(arrayBuffer)
+					);
+					new Notice("Audio saved successfully.");
 			}
 		} catch (err: any) {
 			console.error("Error saving audio file:", err);
@@ -69,6 +61,15 @@ export class AudioHandler {
 		try {
 			if (this.plugin.settings.debugMode) {
 				new Notice("Parsing audio data:" + timestampedFileName);
+			}
+
+			// Create FormData object
+			const formData = new FormData();
+			formData.append("file", blob, timestampedFileName);
+			formData.append("model", this.plugin.settings.model);
+			formData.append("language", this.plugin.settings.language);
+			if (this.plugin.settings.prompt) {
+				formData.append("prompt", this.plugin.settings.prompt);
 			}
 
 			// Call Whisper API for transcription

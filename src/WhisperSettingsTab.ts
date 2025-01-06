@@ -354,10 +354,15 @@ export class WhisperSettingsTab extends PluginSettingTab {
 	private createSilenceRemovalSettings(): void {
 		this.containerEl.createEl("h2", { text: "Silence Removal Settings" });
 
+		// Note below the header
+		this.containerEl.createEl("p", {
+			text: "Note: If Remove Silence is enabled, the final audio will be saved as a WAV file."
+		});
+
 		// Toggle to enable/disable silence removal
 		new Setting(this.containerEl)
 			.setName("Remove Silence")
-			.setDesc("Remove silence from audio before processing")
+			.setDesc("Remove silence from audio before processing (final file will be WAV).")
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.useSilenceRemoval)
 				.onChange(async (value) => {
@@ -370,7 +375,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 			.setName("Silence Threshold")
 			.setDesc("Sound level (in dB) below which audio is considered silence. Lower values are more aggressive (-50 is default)")
 			.addSlider(slider => slider
-				.setLimits(-70, -20, 5)
+				.setLimits(-70, -5, 1)
 				.setValue(this.plugin.settings.silenceThreshold)
 				.setDynamicTooltip()
 				.onChange(async (value) => {
@@ -383,7 +388,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 			.setName("Minimum Silence Duration")
 			.setDesc("Minimum duration (in seconds) of silence to remove")
 			.addSlider(slider => slider
-				.setLimits(0.1, 3.0, 0.1)
+				.setLimits(0.05, 10.0, 0.1)
 				.setValue(this.plugin.settings.silenceDuration)
 				.setDynamicTooltip()
 				.onChange(async (value) => {
@@ -394,7 +399,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		// Remove all silence periods
 		new Setting(this.containerEl)
 			.setName("Remove All Silence")
-			.setDesc("Remove all periods of silence that meet the threshold and duration criteria")
+			.setDesc("When enabled, removes all silent periods throughout the audio. When disabled, only removes leading and trailing silence.")
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.silenceRemoveAll)
 				.onChange(async (value) => {

@@ -40,8 +40,6 @@ const context = await esbuild.context({
 		"@lezer/highlight",
 		"@lezer/lr",
 		...builtins,
-		"@ffmpeg/ffmpeg",
-		"@ffmpeg/util"
 	],
 	format: "cjs",
 	target: "es2018",
@@ -49,6 +47,12 @@ const context = await esbuild.context({
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: outfile,
+	loader: {
+		".wasm": "binary",
+	},
+	define: {
+		"process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "development"),
+	},
 });
 
 if (prod) {

@@ -54,8 +54,8 @@ export const DEFAULT_SETTINGS: WhisperSettings = {
 
 	// Default silence removal settings
 	useSilenceRemoval: false,
-	silenceThreshold: -50,
-	silenceDuration: 1,
+	silenceThreshold: -30,
+	silenceDuration: 2,
 	silenceRemoveAll: true,
 };
 
