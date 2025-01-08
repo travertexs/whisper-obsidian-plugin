@@ -15,43 +15,10 @@ export class Controls extends Modal {
 		this.plugin = plugin;
 		this.containerEl.addClass("recording-controls");
 
-		// Add elapsed time display
-		this.timerDisplay = this.contentEl.createEl("div", { cls: "timer" });
-		this.updateTimerDisplay();
-
 		// Set onUpdate callback for the timer
 		this.plugin.timer.setOnUpdate(() => {
 			this.updateTimerDisplay();
 		});
-
-		// Add button group
-		const buttonGroupEl = this.contentEl.createEl("div", {
-			cls: "button-group",
-		});
-
-		// Add record button
-		this.startButton = new ButtonComponent(buttonGroupEl);
-		this.startButton
-			.setIcon("microphone")
-			.setButtonText(" Record")
-			.onClick(this.startRecording.bind(this))
-			.buttonEl.addClass("button-component");
-
-		// Add pause button
-		this.pauseButton = new ButtonComponent(buttonGroupEl);
-		this.pauseButton
-			.setIcon("pause")
-			.setButtonText(" Pause")
-			.onClick(this.pauseRecording.bind(this))
-			.buttonEl.addClass("button-component");
-
-		// Add stop button
-		this.stopButton = new ButtonComponent(buttonGroupEl);
-		this.stopButton
-			.setIcon("square")
-			.setButtonText(" Stop")
-			.onClick(this.stopRecording.bind(this))
-			.buttonEl.addClass("button-component");
 	}
 
 	async startRecording() {
@@ -81,7 +48,7 @@ export class Controls extends Modal {
 		
 		await this.plugin.audioHandler.sendAudioData(blob, fileName);
 		this.plugin.statusBar.updateStatus(RecordingStatus.Idle);
-		this.close();
+		this.updateTimerDisplay();
 	}
 
 	updateTimerDisplay() {
@@ -94,8 +61,12 @@ export class Controls extends Modal {
 		this.startButton.setDisabled(
 			recorderState === "recording" || recorderState === "paused"
 		);
-		this.pauseButton.setDisabled(recorderState === "inactive");
-		this.stopButton.setDisabled(recorderState === "inactive");
+		this.pauseButton.setDisabled(
+			recorderState === "inactive"
+		);
+		this.stopButton.setDisabled(
+			recorderState === "inactive"
+		);
 
 		this.pauseButton.setButtonText(
 			recorderState === "paused" ? " Resume" : " Pause"
@@ -129,6 +100,7 @@ export class Controls extends Modal {
 			.setIcon("pause")
 			.setButtonText(" Pause")
 			.onClick(this.pauseRecording.bind(this))
+			.setDisabled(true)
 			.buttonEl.addClass("button-component");
 
 		// Add stop button
@@ -137,6 +109,7 @@ export class Controls extends Modal {
 			.setIcon("square")
 			.setButtonText(" Stop")
 			.onClick(this.stopRecording.bind(this))
+			.setDisabled(true)
 			.buttonEl.addClass("button-component");
 
 		// Add language selector below the controls
