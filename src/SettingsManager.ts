@@ -2,9 +2,12 @@ import { Plugin } from "obsidian";
 
 
 export interface WhisperSettings {
+	// API key settings
 	whisperApiKey: string;
 	openAiApiKey: string;
+	geminiApiKey: string;
 	anthropicApiKey: string;
+
 	apiUrl: string;
 	model: string;
 	prompt: string;
@@ -33,6 +36,7 @@ export interface WhisperSettings {
 export const DEFAULT_SETTINGS: WhisperSettings = {
 	whisperApiKey: "",
 	openAiApiKey: "",
+	geminiApiKey: "",
 	anthropicApiKey: "",
 	apiUrl: "https://api.openai.com/v1/audio/transcriptions",
 	model: "whisper-1",
@@ -45,10 +49,10 @@ export const DEFAULT_SETTINGS: WhisperSettings = {
 	createNewFileAfterRecordingPath: "",
 
 	// Set defaults for new settings
-	usePostProcessing: true,
+	usePostProcessing: false,
 	postProcessingPrompt: "You are a perfect transcription program that is able to take faulty dictations and put them into a readable, grammatically correct form without changing their content or changing their specific formulations. It is important that you leave formulations as they are, and make no attempts to formalize or professionalize them. Always return as much of the content as possible. If there are repetions of content, choose the best (often last) one and make the sentence work with that. Just return the dictation, do not comment on it, or introduce it. Always transcribe in the language of the dictation. Here comes the dictation: \n\n",
-	postProcessingModel: "gpt-4o",
-	autoGenerateTitle: true,
+	postProcessingModel: "gpt-4.1-mini",
+	autoGenerateTitle: false,
 	titleGenerationPrompt: "You are an intelligent bureaucratic assistant. You are tasked with generating a short (1-5 words), precise title for the TEXT below. Reply only with the title, nothing else. Generate the title in the main language of the TEXT. TEXT:",
 	keepOriginalTranscription: false,
 

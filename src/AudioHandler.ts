@@ -114,9 +114,38 @@ export class AudioHandler {
 
 				try {
 					let postProcessResponse;
+					const isGeminiModel = this.plugin.settings.postProcessingModel.startsWith('gemini');
 					const isAnthropicModel = this.plugin.settings.postProcessingModel.startsWith('claude');
 
-					if (isAnthropicModel) {
+					if (isGeminiModel) {
+						if (!this.plugin.settings.geminiApiKey) {
+							throw new Error("Gemini API key is required for Gemini models");
+						}
+
+						postProcessResponse = await axios.post(
+							"https://generativelanguage.googleapis.com/v1beta" +
+							"/models/" + this.plugin.settings.postProcessingModel +
+							"\:generateContent?key=" +
+							this.plugin.settings.geminiApiKey, {
+								contents: [
+									{
+										role: "user",
+										parts: [
+											{
+												text: this.plugin.settings.postProcessingPrompt + "\n\n" + finalText
+											}
+										]
+									}
+								]
+							},
+							{
+								headers: {
+									"Content-Type": "application/json",
+								}
+							}
+						);
+						finalText = postProcessResponse.data.candidates[0].content.parts[0].text;
+					} else if (isAnthropicModel) {
 						if (!this.plugin.settings.anthropicApiKey) {
 							throw new Error("Anthropic API key is required for Claude models");
 						}
@@ -192,9 +221,38 @@ export class AudioHandler {
 				}
 				try {
 					let titleResponse;
+					const isGeminiModel = this.plugin.settings.postProcessingModel.startsWith('gemini');
 					const isAnthropicModel = this.plugin.settings.postProcessingModel.startsWith('claude');
 
-					if (isAnthropicModel) {
+					if (isGeminiModel) {
+						if (!this.plugin.settings.geminiApiKey) {
+							throw new Error("Gemini API key is required for Gemini models");
+						}
+
+						titleResponse = await axios.post(
+							"https://generativelanguage.googleapis.com/v1beta" +
+							"/models/" + this.plugin.settings.postProcessingModel +
+							"\:generateContent?key=" +
+							this.plugin.settings.geminiApiKey, {
+								contents: [
+									{
+										role: "user",
+										parts: [
+											{
+												text: this.plugin.settings.titleGenerationPrompt + "\n\n" + finalText
+											}
+										]
+									}
+								]
+							},
+							{
+								headers: {
+									"Content-Type": "application/json",
+								}
+							}
+						);
+						finalTitle = titleResponse.data.candidates[0].content.parts[0].text;
+					} else if (isAnthropicModel) {
 						if (!this.plugin.settings.anthropicApiKey) {
 							throw new Error("Anthropic API key is required for Claude models");
 						}

@@ -22,9 +22,8 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		// Add new API Keys header
 		this.containerEl.createEl("h2", { text: "API Keys" });
 		this.createApiKeySettings();
-		
-		// Add new Whisper Settings header
-		this.containerEl.createEl("h2", { text: "Whisper Settings" });
+
+		this.containerEl.createEl("h2", { text: "Transcription Settings" });
 		this.createApiUrlSetting();
 		this.createModelSetting();
 		this.createPromptSetting();
@@ -94,6 +93,18 @@ export class WhisperSettingsTab extends PluginSettingTab {
 			this.plugin.settings.openAiApiKey,
 			async (value) => {
 				this.plugin.settings.openAiApiKey = value;
+				await this.settingsManager.saveSettings(this.plugin.settings);
+			}
+		);
+
+		// Gemini API Key
+		this.createTextSetting(
+			"Gemini API Key",
+			"Enter your Gemini API key for Gemini models",
+			"Alza...",
+			this.plugin.settings.geminiApiKey,
+			async (value) => {
+				this.plugin.settings.geminiApiKey = value;
 				await this.settingsManager.saveSettings(this.plugin.settings);
 			}
 		);
@@ -298,8 +309,14 @@ export class WhisperSettingsTab extends PluginSettingTab {
 
 		// Update model dropdown
 		const models = [
+			"gpt-4.1",
+			"gpt-4.1-mini",
+			"gpt-4.1-nano",
 			"gpt-4o",
 			"gpt-4o-mini",
+			"gemini-2.0-flash",
+			"gemini-2.0-flash-lite",
+			"claude-3-7-sonnet-latest",
 			"claude-3-5-sonnet-latest",
 			"claude-3-5-haiku-latest",
 			"claude-3-opus-latest"
