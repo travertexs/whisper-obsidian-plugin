@@ -361,8 +361,8 @@ export class AudioHandler {
 
 			let noteContent = 
 				this.plugin.settings.saveAudioFile ?
-				"![[${audioFilePath}]]\n${finalText}" :
-				"${finalText}";
+				`![[${audioFilePath}]]\n${finalText}` :
+				`${finalText}`;
 
 			// Add original transcription if enabled
 			if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
