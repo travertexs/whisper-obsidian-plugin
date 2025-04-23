@@ -359,25 +359,14 @@ export class AudioHandler {
 			const shouldCreateNewFile =
 				this.plugin.settings.createNewFileAfterRecording || !activeView;
 
-			let noteContent = "";
-			if (
-				this.plugin.settings.autoGenerateTitle &&
-				finalTitle &&
-				finalTitle.trim() !== ""
-			) {
-				noteContent = `![[${audioFilePath}]]\n${finalText}`;
-				
-				// Add original transcription if enabled
-				if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
-					noteContent += "\n\n## Original Dictation\n" + originalText;
-				}
-			} else {
-				noteContent = `![[${audioFilePath}]]\n${finalText}`;
-				
-				// Add original transcription if enabled
-				if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
-					noteContent += "\n\n## Original Dictation\n" + originalText;
-				}
+			let noteContent = 
+				this.plugin.settings.saveAudioFile ?
+				"![[${audioFilePath}]]\n${finalText}" :
+				"${finalText}";
+
+			// Add original transcription if enabled
+			if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {
+				noteContent += "\n\n## Original Dictation\n" + originalText;
 			}
 
 			if (shouldCreateNewFile) {
