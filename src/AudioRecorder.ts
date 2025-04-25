@@ -39,7 +39,7 @@ export class NativeAudioRecorder implements AudioRecorder {
 	 * - Re-encodes trimmed buffer as WAV.
 	 */
 	private async removeSilence(inputBlob: Blob): Promise<Blob> {
-		if (!this.plugin.settings.useSilenceRemoval) {
+		if (!this.plugin.settings.silenceRemovalToggle) {
 			if (this.plugin.settings.debugMode) {
 				console.log("Silence removal disabled, returning original audio");
 			}

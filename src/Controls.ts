@@ -142,7 +142,7 @@ export class Controls extends Modal {
 
 		// Set initial value
 		dropdown.value = commonLanguages.find(lang => 
-			lang.value === this.plugin.settings.language
+			lang.value === this.plugin.settings.transcriptionSTTLanguage
 		)?.value || "";
 
 		// Add text input for custom language
@@ -152,8 +152,8 @@ export class Controls extends Modal {
 		});
 		customInput.style.display = dropdown.value === "" ? "block" : "none";
 		customInput.value = commonLanguages.some(lang => 
-			lang.value === this.plugin.settings.language
-		) ? "" : this.plugin.settings.language;
+			lang.value === this.plugin.settings.transcriptionSTTLanguage
+		) ? "" : this.plugin.settings.transcriptionSTTLanguage;
 
 		// Handle dropdown changes
 		dropdown.addEventListener("change", async () => {
@@ -161,7 +161,7 @@ export class Controls extends Modal {
 			customInput.style.display = selectedValue === "" ? "block" : "none";
 			
 			if (selectedValue !== "") {
-				this.plugin.settings.language = selectedValue;
+				this.plugin.settings.transcriptionSTTLanguage = selectedValue;
 				await this.plugin.settingsManager.saveSettings(this.plugin.settings);
 			}
 		});
@@ -169,7 +169,7 @@ export class Controls extends Modal {
 		// Handle custom input changes
 		customInput.addEventListener("change", async () => {
 			if (customInput.value) {
-				this.plugin.settings.language = customInput.value;
+				this.plugin.settings.transcriptionSTTLanguage = customInput.value;
 				await this.plugin.settingsManager.saveSettings(this.plugin.settings);
 			}
 		});
