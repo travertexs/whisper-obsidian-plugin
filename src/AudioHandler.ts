@@ -57,11 +57,6 @@ export class AudioHandler {
 			}
 		}
 
-		const isProviderOpenAI = this.plugin.settings.postProcessingProvider === "openai";
-		const isProviderGemini = this.plugin.settings.postProcessingProvider === "gemini";
-		const isProviderAnthropic = this.plugin.settings.postProcessingProvider === "anthropic";
-
-		let transcriptionResponse;
 		let originalText = "";
 		let finalText: string;
 		try {
@@ -69,9 +64,13 @@ export class AudioHandler {
 				new Notice("Parsing audio data:" + timestampedFileName);
 			}
 
-			if (this.plugin.settings.transcriptionMode == "llm-mode")
-			{
-				if (isProviderOpenAI) {
+			let transcriptionResponse;
+			if (
+				this.plugin.settings.transcriptionMode == "llm-mode" &&
+				this.plugin.settings.transcriptionLLMModel &&
+				this.plugin.settings.transcriptionLLMPrompt
+			) {
+				if (this.plugin.settings.transcriptionLLMProvider === "openai") {
 					transcriptionResponse = await axios.post(
 						OPENAI_API_URI + "/chat/completions",
 						{
@@ -104,13 +103,17 @@ export class AudioHandler {
 						{
 							headers: {
 								"Content-Type": "application/json",
-								Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`,
+								Authorization: `Bearer ${this.plugin.settings.openAIAPIKey}`,
 							},
 						}
 					);
 
 					originalText = transcriptionResponse.data.choices[0].message.content.trim();
-				} else if (isProviderGemini) {
+				} else if (this.plugin.settings.transcriptionLLMProvider === "gemini") {
+					// Convert blob to base64
+					const buffer = await blob.arrayBuffer();
+					const base64 = btoa(new Uint8Array(buffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
+
 					transcriptionResponse = await axios.post(
 						GEMINI_API_URI + "/models/" +
 						this.plugin.settings.transcriptionLLMModel +
@@ -130,9 +133,9 @@ export class AudioHandler {
 										{
 											inlineData: {
 												mimeType: this.plugin.settings.silenceRemovalToggle ?
-													"audio/mp3" :
-													"audio/wav",
-												data: blob,
+													"audio/wav" :
+													"audio/mp3",
+												data: base64,
 											},
 										},
 									],
@@ -150,6 +153,49 @@ export class AudioHandler {
 					);
 
 					originalText = transcriptionResponse.data.candidates[0].content.parts[0].text;
+				} else {
+					transcriptionResponse = await axios.post(
+						this.plugin.settings.openAIFormatAPIUri + "/chat/completions",
+						{
+							model: this.plugin.settings.transcriptionLLMModel,
+							modalities: ["text", "audio"],
+							messages: [
+								{
+									role: "system",
+									content: [{
+										type: "text",
+										text: this.plugin.settings.transcriptionLLMPrompt,
+									}],
+								},
+								{
+									role: "user",
+									content: [{
+										type: "input_audio",
+										input_audio: {
+											data: blob,
+											format: 
+												this.plugin.settings.silenceRemovalToggle ?
+												"wav" :
+												"mp3",
+										},
+									}],
+								},
+							],
+							temperature: this.plugin.settings.transcriptionLLMTemperature,
+						},
+						{
+							headers: {
+								"Content-Type": "application/json",
+								...(
+									this.plugin.settings.openAIFormatAPIKey && {
+										Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`
+									}
+								),
+							},
+						}
+					);
+
+					originalText = transcriptionResponse.data.choices[0].message.content.trim();
 				}
 			} else {
 				// Create FormData object
@@ -161,14 +207,21 @@ export class AudioHandler {
 					formData.append("prompt", this.plugin.settings.transcriptionSTTPrompt);
 				}
 
+				const isProviderOpenAI = this.plugin.settings.transcriptionSTTProvider === "openai";
+
 				// Call Whisper API for transcription
 				transcriptionResponse = await axios.post(
-					this.plugin.settings.openAIFormatAPIUri + "/audio/transcriptions",
+					(isProviderOpenAI ? OPENAI_API_URI : this.plugin.settings.openAIFormatAPIUri) +
+					"/audio/transcriptions",
 					formData,
 					{
 						headers: {
 							"Content-Type": "multipart/form-data",
-							Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`,
+							Authorization: (
+								isProviderOpenAI ?
+								`Bearer ${this.plugin.settings.openAIAPIKey}` :
+								`Bearer ${this.plugin.settings.openAIFormatAPIKey}`
+							),
 						},
 					}
 				).catch(error => {
@@ -206,7 +259,7 @@ export class AudioHandler {
 				try {
 					let postProcessResponse;
 
-					if (isProviderOpenAI) {
+					if (this.plugin.settings.postProcessingProvider === "openai") {
 						postProcessResponse = await axios.post(
 							OPENAI_API_URI + "/chat/completions",
 							{
@@ -231,7 +284,7 @@ export class AudioHandler {
 							}
 						);
 						finalText = postProcessResponse.data.choices[0].message.content.trim();
-					} else if (isProviderGemini) {
+					} else if (this.plugin.settings.postProcessingProvider === "gemini") {
 						if (!this.plugin.settings.geminiAPIKey) {
 							throw new Error("Gemini API key is required for Gemini models");
 						}
@@ -269,7 +322,7 @@ export class AudioHandler {
 							},
 						);
 						finalText = postProcessResponse.data.candidates[0].content.parts[0].text;
-					} else if (isProviderAnthropic) {
+					} else if (this.plugin.settings.postProcessingProvider === "anthropic") {
 						if (!this.plugin.settings.anthropicAPIKey) {
 							throw new Error("Anthropic API key is required for Claude models");
 						}
@@ -316,7 +369,11 @@ export class AudioHandler {
 							{
 								headers: {
 									"Content-Type": "application/json",
-									Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`,
+									...(
+										this.plugin.settings.openAIFormatAPIKey && {
+											Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`
+										}
+									),
 								},
 							}
 						);
@@ -346,8 +403,7 @@ export class AudioHandler {
 				}
 				try {
 					let titleResponse;
-
-					if (isProviderOpenAI) {
+					if (this.plugin.settings.titleGenerationProvider === "openai") {
 						titleResponse = await axios.post(
 							OPENAI_API_URI +"/chat/completions",
 							{
@@ -372,7 +428,7 @@ export class AudioHandler {
 							}
 						);
 						finalTitle = titleResponse.data.choices[0].message.content.trim();
-					} else if (isProviderGemini) {
+					} else if (this.plugin.settings.titleGenerationProvider === "gemini") {
 						if (!this.plugin.settings.geminiAPIKey) {
 							throw new Error("Gemini API key is required for Gemini models");
 						}
@@ -410,7 +466,7 @@ export class AudioHandler {
 							},
 						);
 						finalTitle = titleResponse.data.candidates[0].content.parts[0].text;
-					} else if (isProviderAnthropic) {
+					} else if (this.plugin.settings.titleGenerationProvider === "anthropic") {
 						if (!this.plugin.settings.anthropicAPIKey) {
 							throw new Error("Anthropic API key is required for Claude models");
 						}
@@ -457,7 +513,11 @@ export class AudioHandler {
 							{
 								headers: {
 									"Content-Type": "application/json",
-									Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`,
+									...(
+										this.plugin.settings.openAIFormatAPIKey && {
+											Authorization: `Bearer ${this.plugin.settings.openAIFormatAPIKey}`
+										}
+									),
 								},
 							}
 						);
@@ -517,10 +577,10 @@ export class AudioHandler {
 			const shouldCreateNewFile =
 				this.plugin.settings.createNewFileAfterRecording || !activeView;
 
-			let noteContent = 
-				this.plugin.settings.saveAudioFile ?
-				`![[${audioFilePath}]]\n${finalText}` :
-				`${finalText}`;
+			let noteContent =
+				this.plugin.settings.audioSavingToggle
+					? `![[${audioFilePath}]]\n${finalText}`
+					: `${finalText}`;
 
 			// Add original transcription if enabled
 			if (this.plugin.settings.keepOriginalTranscription && finalText !== originalText) {

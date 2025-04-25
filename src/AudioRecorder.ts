@@ -28,7 +28,6 @@ export class NativeAudioRecorder implements AudioRecorder {
 	constructor(plugin: Whisper) {
 		this.plugin = plugin;
 		this.chunks = [];
-		this.recorder = null;
 	}
 
 	/**

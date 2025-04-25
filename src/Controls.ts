@@ -37,6 +37,13 @@ export class Controls extends Modal {
 	}
 
 	async stopRecording() {
+		const currentState = this.plugin.recorder.getRecordingState();
+		// Prevent stopping if already inactive
+		if (currentState === "inactive" || !currentState) {
+			console.log("Recording is already inactive. Ignoring stop command.");
+			return;
+		}
+
 		console.log("stopping recording...");
 		this.plugin.statusBar.updateStatus(RecordingStatus.Processing);
 		const blob = await this.plugin.recorder.stopRecording();
@@ -57,15 +64,17 @@ export class Controls extends Modal {
 
 	resetGUI() {
 		const recorderState = this.plugin.recorder.getRecordingState();
+		// Treat undefined state (after stopping) as inactive for UI disabling
+		const isEffectivelyInactive = recorderState === "inactive" || typeof recorderState === 'undefined';
 
 		this.startButton.setDisabled(
 			recorderState === "recording" || recorderState === "paused"
 		);
 		this.pauseButton.setDisabled(
-			recorderState === "inactive"
+			isEffectivelyInactive
 		);
 		this.stopButton.setDisabled(
-			recorderState === "inactive"
+			isEffectivelyInactive
 		);
 
 		this.pauseButton.setButtonText(
@@ -154,6 +163,11 @@ export class Controls extends Modal {
 		customInput.value = commonLanguages.some(lang => 
 			lang.value === this.plugin.settings.transcriptionSTTLanguage
 		) ? "" : this.plugin.settings.transcriptionSTTLanguage;
+
+		// Hide the language dropdown and custom input if in LLM transcription mode
+		if (this.plugin.settings.transcriptionMode === 'llm-mode') {
+			languageSetting.settingEl.style.display = "none";
+		}
 
 		// Handle dropdown changes
 		dropdown.addEventListener("change", async () => {

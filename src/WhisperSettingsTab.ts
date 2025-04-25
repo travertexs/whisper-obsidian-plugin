@@ -30,7 +30,9 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		this.containerEl.createEl("h2", { text: "File Saving Settings" });
 		this.createFileSavingSettings();
 
-		this.containerEl.createEl("h2", { text: "Post-processing Settings" });
+		if (this.plugin.settings.transcriptionMode === "stt-mode") {
+			this.containerEl.createEl("h2", { text: "Post-processing Settings" });
+		}
 		this.createPostProcessingSettings();
 
 		this.containerEl.createEl("h2", { text: "Title Generation Settings" });
@@ -57,42 +59,27 @@ export class WhisperSettingsTab extends PluginSettingTab {
 		return Array.from(folderSet);
 	}
 
-	private createTextSetting(
-		name: string,
-		desc: string,
-		placeholder: string,
-		value: string,
-		onChange: (value: string) => Promise<void>
-	): void {
-		new Setting(this.containerEl)
-			.setName(name)
-			.setDesc(desc)
-			.addText((text) =>
-				text
-					.setPlaceholder(placeholder)
-					.setValue(value)
-					.onChange(async (value) => await onChange(value))
-			);
-	}
-
 	private createAPISettings(): void {
-		const providers = [
-			"openai",
-			"openaiFormat",
-			"gemini",
-			"anthropic",
-		];
+		const providers = {
+			"openai": "OpenAI",
+			"openaiFormat": "OpenAI Format",
+			"gemini": "Gemini",
+			"anthropic": "Anthropic",
+		};
 		new Setting(this.containerEl)
-			.setName("Choose platform settings")
-			.setDesc("Select which platform settings to display.")
-			.addDropdown(dropdown => {
-				providers.forEach(provider => dropdown.addOption(provider, provider));
-				dropdown.setValue(this.plugin.settings.apiProviderSetting);
-				dropdown.onChange(async (value) => {
-					this.plugin.settings.apiProviderSetting = value;
-					await this.settingsManager.saveSettings(this.plugin.settings);
-				});
+		.setName("Choose platform settings")
+		.setDesc("Select which platform settings to display.")
+		.addDropdown(dropdown => {
+			for (const [key, value] of Object.entries(providers)) {
+				dropdown.addOption(key, value);
+			}
+			dropdown.setValue(this.plugin.settings.apiProviderSetting);
+			dropdown.onChange(async (value) => {
+				this.plugin.settings.apiProviderSetting = value;
+				await this.settingsManager.saveSettings(this.plugin.settings);
+				this.display();
 			});
+		});
 
 		// OpenAI API Key
 		if (this.plugin.settings.apiProviderSetting === "openai") {
@@ -168,41 +155,49 @@ export class WhisperSettingsTab extends PluginSettingTab {
 
 	private createTranscriptionSettings(): void {
 		// Transcription Mode Settings
-		const modes = [
-			"llm-mode",
-			"stt-mode",
-		];
+		const modes = {
+			"llm-mode": "LLM Transcribing Mode",
+			"stt-mode": "Speech-to-text Mode",
+		};
 		new Setting(this.containerEl)
 		.setName("Transcription Mode")
 		.setDesc("Select which transcription mode to use for transcribing.")
 		.addDropdown(dropdown => {
-			modes.forEach(mode => dropdown.addOption(mode, mode));
-			dropdown.setValue(this.plugin.settings.postProcessingModel);
+			for (const [key, value] of Object.entries(modes)) {
+				dropdown.addOption(key, value);
+			}
+			dropdown.setValue(this.plugin.settings.transcriptionMode);
 			dropdown.onChange(async (value) => {
 				this.plugin.settings.transcriptionMode = value;
 				await this.settingsManager.saveSettings(this.plugin.settings);
+				this.display();
 			});
 		});
 
-		const providers = [
-			"openai",
-			"openaiFormat",
-			"gemini",
-		];
-		new Setting(this.containerEl)
-		.setName("Choose provider")
-		.setDesc("Select which provider to use.")
-		.addDropdown(dropdown => {
-			providers.forEach(provider => dropdown.addOption(provider, provider));
-			dropdown.setValue(this.plugin.settings.apiProviderSetting);
-			dropdown.onChange(async (value) => {
-				this.plugin.settings.apiProviderSetting = value;
-				await this.settingsManager.saveSettings(this.plugin.settings);
-			});
-		});
 
-		// Transcription Model Settings
+		
 		if (this.plugin.settings.transcriptionMode === "llm-mode") {
+			// Transcription Provider Settings
+			const providers = {
+				"openai": "OpenAI",
+				"openaiFormat": "OpenAI Format",
+				"gemini": "Gemini",
+			};
+			new Setting(this.containerEl)
+			.setName("Choose provider for LLM")
+			.setDesc("Select which provider to use.")
+			.addDropdown(dropdown => {
+				for (const [key, value] of Object.entries(providers)) {
+					dropdown.addOption(key, value);
+				}
+				dropdown.setValue(this.plugin.settings.transcriptionLLMProvider);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.transcriptionLLMProvider = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				});
+			});
+
+			// Transcription Model Settings
 			new Setting(this.containerEl)
 			.setName("LLM")
 			.setDesc("Specify the LLM to use for transcribing audio to text (gpt-4o-mini-audio for OpenAI, gemini-2.0-flash for Gemini, etc)")
@@ -213,20 +208,7 @@ export class WhisperSettingsTab extends PluginSettingTab {
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				});
 			});
-		} else {
-			new Setting(this.containerEl)
-			.setName("Speech-to-text Model")
-			.setDesc("Specify the speech-to-text model to use for transcribing audio to text (whisper-1 for OpenAI, whisper-large-v3 for Groq, etc)")
-			.addText((text) => {
-				text.setValue(this.plugin.settings.transcriptionSTTModel);
-				text.onChange(async (value) => {
-					this.plugin.settings.transcriptionSTTModel = value;
-					await this.settingsManager.saveSettings(this.plugin.settings);
-				});
-			});
-		}
-		
-		if (this.plugin.settings.transcriptionMode === "llm-mode") {
+
 			// Transcription Temperature Settings
 			new Setting(this.containerEl)
 			.setName("Temperature for transcribing")
@@ -254,14 +236,45 @@ export class WhisperSettingsTab extends PluginSettingTab {
 				});
 			});
 		} else {
+			// Transcription Provider Settings
+			const providers = {
+				"openai": "OpenAI",
+				"openaiFormat": "OpenAI Format",
+			};
+			new Setting(this.containerEl)
+			.setName("Choose provider for speech-to-text model")
+			.setDesc("Select which provider to use.")
+			.addDropdown(dropdown => {
+				for (const [key, value] of Object.entries(providers)) {
+					dropdown.addOption(key, value);
+				}
+				dropdown.setValue(this.plugin.settings.transcriptionSTTProvider);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.transcriptionSTTProvider = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				});
+			});
+
+			// Transcription Model Settings
+			new Setting(this.containerEl)
+			.setName("Speech-to-text Model")
+			.setDesc("Specify the speech-to-text model to use for transcribing audio to text (whisper-1 for OpenAI, whisper-large-v3 for Groq, etc)")
+			.addText((text) => {
+				text.setValue(this.plugin.settings.transcriptionSTTModel);
+				text.onChange(async (value) => {
+					this.plugin.settings.transcriptionSTTModel = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				});
+			});
+
 			// Transcription Language Settings
 			new Setting(this.containerEl)
 			.setName("Language")
 			.setDesc("Specify the language of the speech (e.g. en for English). This can be left blank for auto-detection with some models, but some has to be set.")
-			.addTextArea(textArea => {
-				textArea.setPlaceholder("en");
-				textArea.setValue(this.plugin.settings.transcriptionSTTLanguage);
-				textArea.onChange(async (value) => {
+			.addText(text => {
+				text.setPlaceholder("en");
+				text.setValue(this.plugin.settings.transcriptionSTTLanguage);
+				text.onChange(async (value) => {
 					this.plugin.settings.transcriptionSTTLanguage = value;
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				});
@@ -376,47 +389,40 @@ export class WhisperSettingsTab extends PluginSettingTab {
 				});
 			});
 
-			// Post-processing prompt
+			const providers = {
+				"openai": "OpenAI",
+				"openaiFormat": "OpenAI Format",
+				"gemini": "Gemini",
+				"anthropic": "Anthropic",
+			};
 			new Setting(this.containerEl)
-			.setName("Post-processing Prompt")
-			.setDesc("Enter the prompt that will be sent to the GPT model to polish the transcription.")
-			.addTextArea(textArea => {
-				textArea.setPlaceholder("Enter your prompt here...");
-				textArea.setValue(this.plugin.settings.postProcessingPrompt);
-				textArea.onChange(async (value) => {
-					this.plugin.settings.postProcessingPrompt = value;
+			.setName("Choose provider for LLM")
+			.setDesc("Select which provider to use.")
+			.addDropdown(dropdown => {
+				for (const [key, value] of Object.entries(providers)) {
+					dropdown.addOption(key, value);
+				}
+				dropdown.setValue(this.plugin.settings.postProcessingProvider);
+				dropdown.onChange(async (value) => {
+					this.plugin.settings.postProcessingProvider = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+					this.display();
+				});
+			});
+
+			// Post-processing model
+			new Setting(this.containerEl)
+			.setName("Post-processing Model")
+			.setDesc("Specify the AI model to use for post-processing (gpt-4o-mini-audio for OpenAI, gemini-2.0-flash for Gemini, etc).")
+			.addText((text) => {
+				text.setValue(this.plugin.settings.postProcessingModel);
+				text.onChange(async (value) => {
+					this.plugin.settings.postProcessingModel = value;
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				});
 			});
 
-
-			// Update model dropdown
-			const models = [
-				"gpt-4.1",
-				"gpt-4.1-mini",
-				"gpt-4.1-nano",
-				"gpt-4o",
-				"gpt-4o-mini",
-				"gemini-2.0-flash",
-				"gemini-2.0-flash-lite",
-				"claude-3-7-sonnet-latest",
-				"claude-3-5-sonnet-latest",
-				"claude-3-5-haiku-latest",
-				"claude-3-opus-latest"
-			];
-			new Setting(this.containerEl)
-				.setName("Post-processing Model")
-				.setDesc("Select which AI model to use for post-processing.")
-				.addDropdown(dropdown => {
-					models.forEach(model => dropdown.addOption(model, model));
-					dropdown.setValue(this.plugin.settings.postProcessingModel);
-					dropdown.onChange(async (value) => {
-						this.plugin.settings.postProcessingModel = value;
-						await this.settingsManager.saveSettings(this.plugin.settings);
-					});
-				});
-
-			// Post-Processing Temperature Settings
+			// Post-Processing Temperature
 			new Setting(this.containerEl)
 			.setName("Temperature for post-processing")
 			.setDesc("Specify the temperature of the LLM. A value between 0 and 2. Higher values (closer to 2) means more creative outputs.")
@@ -426,6 +432,19 @@ export class WhisperSettingsTab extends PluginSettingTab {
 				slider.setDynamicTooltip();
 				slider.onChange(async (value) => {
 					this.plugin.settings.postProcessingTemperature = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				});
+			});
+
+			// Post-processing prompt
+			new Setting(this.containerEl)
+			.setName("Post-processing Prompt")
+			.setDesc("Enter the prompt that will be sent to the GPT model to polish the transcription.")
+			.addTextArea(textArea => {
+				textArea.setPlaceholder("Enter your prompt here...");
+				textArea.setValue(this.plugin.settings.postProcessingPrompt);
+				textArea.onChange(async (value) => {
+					this.plugin.settings.postProcessingPrompt = value;
 					await this.settingsManager.saveSettings(this.plugin.settings);
 				});
 			});
@@ -457,7 +476,40 @@ export class WhisperSettingsTab extends PluginSettingTab {
 			});
 		});
 
-		// Title Generation Temperature Settings
+		const providers = {
+			"openai": "OpenAI",
+			"openaiFormat": "OpenAI Format",
+			"gemini": "Gemini",
+			"anthropic": "Anthropic",
+		};
+		new Setting(this.containerEl)
+		.setName("Choose provider for LLM")
+		.setDesc("Select which provider to use.")
+		.addDropdown(dropdown => {
+			for (const [key, value] of Object.entries(providers)) {
+				dropdown.addOption(key, value);
+			}
+			dropdown.setValue(this.plugin.settings.titleGenerationProvider);
+			dropdown.onChange(async (value) => {
+				this.plugin.settings.titleGenerationProvider = value;
+				await this.settingsManager.saveSettings(this.plugin.settings);
+				this.display();
+			});
+		});
+
+			// Title generation model
+			new Setting(this.containerEl)
+			.setName("Title Generation Model")
+			.setDesc("Specify the AI model to use for post-processing (gpt-4o-mini-audio for OpenAI, gemini-2.0-flash for Gemini, etc).")
+			.addText((text) => {
+				text.setValue(this.plugin.settings.titleGenerationModel);
+				text.onChange(async (value) => {
+					this.plugin.settings.titleGenerationModel = value;
+					await this.settingsManager.saveSettings(this.plugin.settings);
+				});
+			});
+
+		// Title Generation Temperature
 		new Setting(this.containerEl)
 		.setName("Temperature for title generating")
 		.setDesc("Specify the temperature of the LLM. A value between 0 and 2. Higher values (closer to 2) means more creative outputs.")
